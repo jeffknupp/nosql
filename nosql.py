@@ -26,7 +26,8 @@ STATS = {
 
 
 def update_stats(command, success):
-
+    """Update the STATS dict with info about if executing
+    *command* was a *success*."""
     if success:
         STATS[command]['success'] += 1
     else:
@@ -52,11 +53,7 @@ def handle_get(key):
 def handle_putlist(key, value):
     """Return a tuple containing True if the command succeeded and the message
     to send back to the client."""
-    value_list = value.split(',')
-    if not value_list:
-        return (False, 'ERROR: Value [{}] not a valid list'.format(value))
-    else:
-        return handle_put(key, value_list)
+    return handle_put(key, value)
 
 
 def handle_getlist(key):
@@ -119,6 +116,7 @@ def handle_delete(key):
 
 
 def handle_stats():
+    """Return a tuple containing True and the contents of the STATS dict."""
     return (True, str(STATS))
 
 COMMAND_HANDLERS = {
@@ -135,9 +133,14 @@ DATA = {}
 
 
 def parse_message(data):
-    command, key, value, value_type = data.split(';')
+    """Return a tuple contianing the command, the key, and (optionally) the
+    value cast to the appropriate type."""
+    command, key, value, value_type = data.strip().split(';')
     if value:
-        value = TYPE_CONVERSION[value_type](value)
+        if value_type == 'LIST':
+            value = value.split(',')
+        else:
+            value = TYPE_CONVERSION[value_type](value)
     else:
         value = None
     return command, key, value
@@ -169,8 +172,7 @@ def main():
         else:
             response = (False, 'Unknown command type [{}]'.format(command))
         update_stats(command, response[0])
-        connection.sendall(
-            bytes('{};{}'.format(response[0], response[1]), encoding='ascii'))
+        connection.sendall('{};{}'.format(response[0], response[1]))
         connection.close()
 
 
