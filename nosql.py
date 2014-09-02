@@ -1,14 +1,7 @@
 """NoSQL database written in Python."""
-from __future__ import print_function
 
 # Standard library imports
 import socket
-
-TYPE_CONVERSION = {
-    'INT': int,
-    'STRING': str,
-    'LIST': list,
-    }
 
 HOST = 'localhost'
 PORT = 50505
@@ -90,10 +83,10 @@ def handle_increment(key):
 def handle_append(key, value):
     """Return a tuple containing True if the key's value could be appended to
     and the message to send back to the client."""
-    return_value = exists, value = handle_get(key)
+    return_value = exists, list_value = handle_get(key)
     if not exists:
         return return_value
-    elif not isinstance(value, list):
+    elif not isinstance(list_value, list):
         return (
             False,
             'ERROR: Key [{}] contains non-list value ([{}])'.format(key, value)
@@ -136,11 +129,13 @@ def parse_message(data):
     """Return a tuple contianing the command, the key, and (optionally) the
     value cast to the appropriate type."""
     command, key, value, value_type = data.strip().split(';')
-    if value:
+    if value_type:
         if value_type == 'LIST':
             value = value.split(',')
+        elif value_type == 'INT':
+            value = int(value)
         else:
-            value = TYPE_CONVERSION[value_type](value)
+            value = str(value)
     else:
         value = None
     return command, key, value
@@ -152,7 +147,7 @@ def main():
     SOCKET.listen(1)
     while 1:
         connection, address = SOCKET.accept()
-        print('New connection from [{}]'.format(address))
+        print 'New connection from [{}]'.format(address)
         data = connection.recv(4096).decode()
         command, key, value = parse_message(data)
         if command == 'STATS':
@@ -167,6 +162,7 @@ def main():
         elif command in (
             'PUT',
             'PUTLIST',
+            'APPEND',
                 ):
             response = COMMAND_HANDLERS[command](key, value)
         else:
